@@ -39,6 +39,10 @@ namespace XnewsAdapter
                 Directory.CreateDirectory(Application.StartupPath + "\\counts");
             }
 
+            if (!Directory.Exists(Application.StartupPath + "\\dealScriptxml"))
+            {
+                Directory.CreateDirectory(Application.StartupPath + "\\dealScriptxml");
+            }
             htrelation = new Hashtable();
             WriteLogNew.writeLog("软件启动!",logpath,"info");
             SetText(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") +" "+"软件启动!\n");
@@ -683,10 +687,14 @@ namespace XnewsAdapter
                         try
                         {
                             //删除文稿文件
+                            string localscirptxml = Application.StartupPath + "\\dealScriptxml\\" + Path.GetFileName(scriptfile);
+                            File.Copy(scriptfile, localscirptxml, true);
+                            WriteLogNew.writeLog("复制处理文稿到本地!" + localscirptxml, logpath, "info");
+                            File.Delete(scriptfile);
                         }
                         catch (Exception ee)
                         {
-
+                            WriteLogNew.writeLog("处理文稿数据异常!" + ee.ToString(), logpath, "error");
                         }
                     }  // foreach (string scriptfile in scriptxmlfiles)
 
