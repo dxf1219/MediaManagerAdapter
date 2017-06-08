@@ -1,0 +1,49 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="XnewsAdapter.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="scanInterval" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">5000</Value>
+    </Setting>
+    <Setting Name="AppTitle" Type="System.String" Scope="User">
+      <Value Profile="(Default)">MediaManagerAdapter</Value>
+    </Setting>
+    <Setting Name="arcTranscodeAPI" Type="System.String" Scope="User">
+      <Value Profile="(Default)">http://10.27.124.11/api</Value>
+    </Setting>
+    <Setting Name="arcProfile" Type="System.String" Scope="User">
+      <Value Profile="(Default)">mxf.xml</Value>
+    </Setting>
+    <Setting Name="arcappid" Type="System.String" Scope="User">
+      <Value Profile="(Default)">mxf</Value>
+    </Setting>
+    <Setting Name="errorRetryCounts" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">3</Value>
+    </Setting>
+    <Setting Name="checkStatusInterval" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">5000</Value>
+    </Setting>
+    <Setting Name="textclearLenth" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">100</Value>
+    </Setting>
+    <Setting Name="smspath" Type="System.String" Scope="User">
+      <Value Profile="(Default)">\\10.26.124.101\admin\xw\smstxt</Value>
+    </Setting>
+    <Setting Name="redisConnstring" Type="System.String" Scope="User">
+      <Value Profile="(Default)">172.27.198.22:16379,password=P@ssw0rdredis</Value>
+    </Setting>
+    <Setting Name="mobilePhones" Type="System.Collections.Specialized.StringCollection" Scope="User">
+      <Value Profile="(Default)">&lt;?xml version="1.0" encoding="utf-16"?&gt;
+&lt;ArrayOfString xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"&gt;
+  &lt;string&gt;13917347195;丁鑫锋&lt;/string&gt;
+  &lt;string&gt;15821225096;8990值班&lt;/string&gt;
+&lt;/ArrayOfString&gt;</Value>
+    </Setting>
+    <Setting Name="scanScriptPath" Type="System.String" Scope="User">
+      <Value Profile="(Default)">\\10.26.124.101\admin\xw\XnewsSearchToAvid\script</Value>
+    </Setting>
+    <Setting Name="scanVideoPath" Type="System.String" Scope="User">
+      <Value Profile="(Default)">\\10.26.124.101\admin\xw\XnewsSearchToAvid\video</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>
