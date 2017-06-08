@@ -673,109 +673,102 @@ namespace XnewsAdapter
                   
                             #endregion
 
-                            #region 视频文件
-                            else if (xftpnfilepaths[0].Equals(videopaths[videopaths.Length - 1])) //判断是否为视频文件的路径
-                            {
-                                //如果文件是xml 直接复制到目的地
-                                string xftpfilepathtemp = xftpin.XftpPath + xfile.Path;
-                                WriteLogNew.writeLog("xftpfile:" + xftpfilepathtemp, logpath, "info");
-                                if (Path.GetExtension(xftpfilepathtemp).ToLower().Equals(".xml"))
-                                {
-                                    //复制xml文件到指定目录
-                                    try
-                                    {
-                                        string destmediafile = xftpin.MediaXmlPath + "\\" + Path.GetFileName(xftpfilepathtemp);
-                                        File.Copy(xftpfilepathtemp, destmediafile, true);
-                                        WriteLogNew.writeLog("复制media xml 到指定目录成功!" + destmediafile, logpath, "info");
-                                    }
-                                    catch (Exception ee)
-                                    {
-                                        WriteLogNew.writeLog("复制media xml 到指定目录异常!" + ee.ToString(), logpath, "error");
-                                    }
-                                }
-                                else
-                                {
-                                    //认为是视频文件 下发任务到转码
-                                    //调用虹软转码转成50Mb/s MXF文件
-                                    string destxmlpreset = Application.StartupPath + "\\arcpreset\\" + Path.GetFileNameWithoutExtension(xftpfilepathtemp) + ".xml";
-
-                                    File.Copy(Application.StartupPath + "\\" + Properties.Settings.Default.arcProfile, destxmlpreset, true);
-                                    XmlDocument docarcpreset = new XmlDocument();
-
-                                    docarcpreset.Load(destxmlpreset);
-
-                                    XmlElement rootarcpreset = docarcpreset.DocumentElement;
-
-                                    //已经把transcode output name 修改了
-                                    XmlNode tasknameNode = docarcpreset.SelectSingleNode("/task/name");
-                                    string arctitle = Path.GetFileNameWithoutExtension(xftpfilepathtemp);
-
-                                    tasknameNode.InnerText = arctitle + "_ding";
-
-                                    XmlNode localuri = docarcpreset.SelectSingleNode("/task/inputs/localfile/uri");
-
-                                    try
-                                    {
-                                        string linuxfilepath = xfile.Path.Replace("\\", "/");
-                                        localuri.InnerText = xftpin.TranscodeFileInPath + "/" + linuxfilepath;
-
-                                        XmlNode outputuri = docarcpreset.SelectSingleNode("/task/outputgroups/filearchive/uri");
-                                        outputuri.InnerText = xftpin.TranscodeFileOutPath;
-
-                                        XmlNode outputname = docarcpreset.SelectSingleNode("/task/outputgroups/filearchive/targetname");
-                                        outputname.InnerText = Path.GetFileNameWithoutExtension(xftpfilepathtemp);
-
-                                        docarcpreset.Save(destxmlpreset);
-                                        WriteLogNew.writeLog("下发任务到转码!" + outputname.InnerText, logpath, "info");
-                                        SetText(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " " + "下发任务到转码!" + outputname.InnerText + "\n");
-
-                                        ArcParam aparm = new ArcParam();
-                                        aparm.Apiurl = Properties.Settings.Default.arcTranscodeAPI;
-                                        WriteLogNew.writeLog("转码IP:" + aparm.Apiurl, logpath, "info");
-                                        aparm.Paramxml = destxmlpreset;
-                                        aparm.Clipinfo = localuri.InnerText;
-
-                                        ThreadPool.QueueUserWorkItem(new WaitCallback(sendArcTranscodeThread), aparm);
-
-                                    }
-                                    catch (Exception ee)
-                                    {
-                                        WriteLogNew.writeLog("转码异常!" + ee.ToString(), logpath, "error");
-                                    }
-                                }
-
-                            }//判断是否为视频文件的路径
-                            #endregion
-
-                            #region pic
-                            else if (xftpnfilepaths[0].Equals(picpaths[picpaths.Length - 1])) //判断是否为图片文件的路径
-                            {
-                                //复制图片文件到指定目录
-                                string xftpfilepathtemp = xftpin.XftpPath + xfile.Path;
-                                try
-                                {
-                                    string destmediafile = xftpin.PicOutputPath + "\\" + Path.GetFileName(xftpfilepathtemp);
-                                    File.Copy(xftpfilepathtemp, destmediafile, true);
-                                    WriteLogNew.writeLog("复制pic 到指定目录成功!" + destmediafile, logpath, "info");
-                                }
-                                catch (Exception ee)
-                                {
-                                    WriteLogNew.writeLog("复制pic 到指定目录异常!" + ee.ToString(), logpath, "error");
-                                }
-                            }//判断是否为图片文件的路径
-                            #endregion
                         }
                         catch (Exception ee)
                         {
-                            WriteLogNew.writeLog("处理xnews数据异常!" + ee.ToString(), logpath, "error");
+                            WriteLogNew.writeLog("处理文稿数据异常!" + ee.ToString(), logpath, "error");
 
                         }
                         //将文件设置成已处理
-                        ResultInfo riig = getxftpinfo(xftpin, "take");
+                        try
+                        {
+                            //删除文稿文件
+                        }
+                        catch (Exception ee)
+                        {
+
+                        }
                     }  // foreach (string scriptfile in scriptxmlfiles)
 
-              
-                                  
+                    //处理视频文件
+                    string[] videoxmlfiles = Directory.GetFiles(Properties.Settings.Default.scanVideoPath, "*.xml", SearchOption.TopDirectoryOnly);
+                    foreach (string videoxmlfile in videoxmlfiles)
+                    {
+                           #region 视频文件
+                    
+                            //如果文件是xml 直接复制到目的地
+                            string xftpfilepathtemp = xftpin.XftpPath + xfile.Path;
+                            WriteLogNew.writeLog("xftpfile:" + xftpfilepathtemp, logpath, "info");
+                            if (Path.GetExtension(xftpfilepathtemp).ToLower().Equals(".xml"))
+                            {
+                                //复制xml文件到指定目录
+                                try
+                                {
+                                    string destmediafile = xftpin.MediaXmlPath + "\\" + Path.GetFileName(xftpfilepathtemp);
+                                    File.Copy(xftpfilepathtemp, destmediafile, true);
+                                    WriteLogNew.writeLog("复制media xml 到指定目录成功!" + destmediafile, logpath, "info");
+                                }
+                                catch (Exception ee)
+                                {
+                                    WriteLogNew.writeLog("复制media xml 到指定目录异常!" + ee.ToString(), logpath, "error");
+                                }
+                            }
+                            else
+                            {
+                                //认为是视频文件 下发任务到转码
+                                //调用虹软转码转成50Mb/s MXF文件
+                                string destxmlpreset = Application.StartupPath + "\\arcpreset\\" + Path.GetFileNameWithoutExtension(xftpfilepathtemp) + ".xml";
+
+                                File.Copy(Application.StartupPath + "\\" + Properties.Settings.Default.arcProfile, destxmlpreset, true);
+                                XmlDocument docarcpreset = new XmlDocument();
+
+                                docarcpreset.Load(destxmlpreset);
+
+                                XmlElement rootarcpreset = docarcpreset.DocumentElement;
+
+                                //已经把transcode output name 修改了
+                                XmlNode tasknameNode = docarcpreset.SelectSingleNode("/task/name");
+                                string arctitle = Path.GetFileNameWithoutExtension(xftpfilepathtemp);
+
+                                tasknameNode.InnerText = arctitle + "_ding";
+
+                                XmlNode localuri = docarcpreset.SelectSingleNode("/task/inputs/localfile/uri");
+
+                                try
+                                {
+                                    string linuxfilepath = xfile.Path.Replace("\\", "/");
+                                    localuri.InnerText = xftpin.TranscodeFileInPath + "/" + linuxfilepath;
+
+                                    XmlNode outputuri = docarcpreset.SelectSingleNode("/task/outputgroups/filearchive/uri");
+                                    outputuri.InnerText = xftpin.TranscodeFileOutPath;
+
+                                    XmlNode outputname = docarcpreset.SelectSingleNode("/task/outputgroups/filearchive/targetname");
+                                    outputname.InnerText = Path.GetFileNameWithoutExtension(xftpfilepathtemp);
+
+                                    docarcpreset.Save(destxmlpreset);
+                                    WriteLogNew.writeLog("下发任务到转码!" + outputname.InnerText, logpath, "info");
+                                    SetText(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " " + "下发任务到转码!" + outputname.InnerText + "\n");
+
+                                    ArcParam aparm = new ArcParam();
+                                    aparm.Apiurl = Properties.Settings.Default.arcTranscodeAPI;
+                                    WriteLogNew.writeLog("转码IP:" + aparm.Apiurl, logpath, "info");
+                                    aparm.Paramxml = destxmlpreset;
+                                    aparm.Clipinfo = localuri.InnerText;
+
+                                    ThreadPool.QueueUserWorkItem(new WaitCallback(sendArcTranscodeThread), aparm);
+
+                                }
+                                catch (Exception ee)
+                                {
+                                    WriteLogNew.writeLog("转码异常!" + ee.ToString(), logpath, "error");
+                                }
+                            }
+
+                    
+                        #endregion
+
+                    } //foreach (string videoxmlfile in videoxmlfiles)
+
                 }
                 catch (Exception ee)
                 {
@@ -935,13 +928,27 @@ namespace XnewsAdapter
                 sw.WriteLine("</fields>");
                 sw.WriteLine("<body>");
 
-               //先获取tagnode的attribute
                 string writelines = "";
-                writelines += " <p><cc> &lt; &lt;</cc><pi> 警告--红色模板请勿删除！&lt; 及 & gt; 符号方便打印导语稿件，请勿删除!</pi><cc> &gt; &gt;</cc></p>";
-                writelines += " <p><cc> &lt; &lt;</cc></p>";
-                writelines += " <p><pi>[正文] </pi> </p>";
+                writelines = " <p><cc> &lt; &lt;</cc><pi> 警告--红色模板请勿删除！&lt; 及 & gt; 符号方便打印导语稿件，请勿删除!</pi><cc> &gt; &gt;</cc></p>";
                 sw.WriteLine(writelines);
-         
+                //写入具体内容
+                writelines = " <p><cc> &lt; &lt;</cc></p>";
+                sw.WriteLine(writelines);
+
+                //
+                writelines = " <p><pi>[正文] </pi> </p>";
+                sw.WriteLine(writelines);
+
+                writelines   = "< p><cc>&gt;&gt;</cc></p>  "; 
+                sw.WriteLine(writelines);
+                writelines = "<p><pi>[导语] </pi> </ p >";
+                sw.WriteLine(writelines);
+                writelines = "< p ></ p >";
+                sw.WriteLine(writelines);
+                writelines = "< p >< pi >[编后] </ pi >  </ p >";
+                sw.WriteLine(writelines);
+                writelines = "< p ></ p >";
+                sw.WriteLine(writelines);
                 sw.WriteLine("</body>");
                 sw.WriteLine("</nsml>");
                 
