@@ -704,28 +704,22 @@ namespace XnewsAdapter
                     {
                            #region 视频文件
                     
-                            //如果文件是xml 直接复制到目的地
-                            string xftpfilepathtemp = xftpin.XftpPath + xfile.Path;
-                            WriteLogNew.writeLog("xftpfile:" + xftpfilepathtemp, logpath, "info");
-                            if (Path.GetExtension(xftpfilepathtemp).ToLower().Equals(".xml"))
-                            {
                                 //复制xml文件到指定目录
                                 try
                                 {
-                                    string destmediafile = xftpin.MediaXmlPath + "\\" + Path.GetFileName(xftpfilepathtemp);
-                                    File.Copy(xftpfilepathtemp, destmediafile, true);
+                                    string destmediafile = xftpin.MediaXmlPath + "\\" + Path.GetFileName(videoxmlfile);
+                                    File.Copy(videoxmlfile, destmediafile, true);
                                     WriteLogNew.writeLog("复制media xml 到指定目录成功!" + destmediafile, logpath, "info");
                                 }
                                 catch (Exception ee)
                                 {
                                     WriteLogNew.writeLog("复制media xml 到指定目录异常!" + ee.ToString(), logpath, "error");
                                 }
-                            }
-                            else
-                            {
+                          
                                 //认为是视频文件 下发任务到转码
+                                //需要视频文件是否为xdcam 50Mb/s的素材
                                 //调用虹软转码转成50Mb/s MXF文件
-                                string destxmlpreset = Application.StartupPath + "\\arcpreset\\" + Path.GetFileNameWithoutExtension(xftpfilepathtemp) + ".xml";
+                                string destxmlpreset = Application.StartupPath + "\\arcpreset\\" + Path.GetFileNameWithoutExtension(videoxmlfile) + ".xml";
 
                                 File.Copy(Application.StartupPath + "\\" + Properties.Settings.Default.arcProfile, destxmlpreset, true);
                                 XmlDocument docarcpreset = new XmlDocument();
@@ -770,7 +764,7 @@ namespace XnewsAdapter
                                 {
                                     WriteLogNew.writeLog("转码异常!" + ee.ToString(), logpath, "error");
                                 }
-                            }
+                            
 
                     
                         #endregion
