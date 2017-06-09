@@ -49,7 +49,7 @@ namespace XnewsAdapter.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("http://10.27.124.11/api")]
+        [global::System.Configuration.DefaultSettingValueAttribute("http://10.27.137.127/api")]
         public string arcTranscodeAPI {
             get {
                 return ((string)(this["arcTranscodeAPI"]));
@@ -133,7 +133,7 @@ namespace XnewsAdapter.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("172.27.198.22:16379,password=P@ssw0rdredis")]
+        [global::System.Configuration.DefaultSettingValueAttribute("10.27.137.24:16379,password=P@ssw0rdredis")]
         public string redisConnstring {
             get {
                 return ((string)(this["redisConnstring"]));
