@@ -702,8 +702,13 @@ namespace XnewsAdapter
                     string[] videoxmlfiles = Directory.GetFiles(Properties.Settings.Default.scanVideoPath, "*.xml", SearchOption.TopDirectoryOnly);
                     foreach (string videoxmlfile in videoxmlfiles)
                     {
-                           #region 视频文件
-                    
+                        #region 视频文件
+                        //解析xml 获取素材路径
+                        string mediafile = "";
+                        string newfilename = "";
+                                //判断该文件是否需要转码 
+                                //调用mediainfo 
+
                                 //复制xml文件到指定目录
                                 try
                                 {
@@ -730,7 +735,7 @@ namespace XnewsAdapter
 
                                 //已经把transcode output name 修改了
                                 XmlNode tasknameNode = docarcpreset.SelectSingleNode("/task/name");
-                                string arctitle = Path.GetFileNameWithoutExtension(xftpfilepathtemp);
+                                string arctitle = newfilename;
 
                                 tasknameNode.InnerText = arctitle + "_ding";
 
@@ -738,14 +743,14 @@ namespace XnewsAdapter
 
                                 try
                                 {
-                                    string linuxfilepath = xfile.Path.Replace("\\", "/");
+                                    string linuxfilepath = mediafile.Replace("\\", "/");
                                     localuri.InnerText = xftpin.TranscodeFileInPath + "/" + linuxfilepath;
 
                                     XmlNode outputuri = docarcpreset.SelectSingleNode("/task/outputgroups/filearchive/uri");
                                     outputuri.InnerText = xftpin.TranscodeFileOutPath;
 
                                     XmlNode outputname = docarcpreset.SelectSingleNode("/task/outputgroups/filearchive/targetname");
-                                    outputname.InnerText = Path.GetFileNameWithoutExtension(xftpfilepathtemp);
+                                    outputname.InnerText = newfilename+".mxf";
 
                                     docarcpreset.Save(destxmlpreset);
                                     WriteLogNew.writeLog("下发任务到转码!" + outputname.InnerText, logpath, "info");
