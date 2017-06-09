@@ -181,5 +181,17 @@ namespace XnewsAdapter.Properties {
                 this["scanVideoPath"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("XDCAM HD422")]
+        public string avidcoder {
+            get {
+                return ((string)(this["avidcoder"]));
+            }
+            set {
+                this["avidcoder"] = value;
+            }
+        }
     }
 }

@@ -13,6 +13,8 @@ using System.Collections;
 using System.Net;
 using System.Web.Script.Serialization;
 using StackExchange.Redis;
+using MediaInfoLib;
+using System.Text.RegularExpressions;
 
 namespace XnewsAdapter
 {
@@ -29,6 +31,11 @@ namespace XnewsAdapter
                 Directory.CreateDirectory(logpath);
             }
 
+            if (!Directory.Exists(Application.StartupPath + "\\mediainfo"))
+            {
+                Directory.CreateDirectory(Application.StartupPath + "\\mediainfo");
+            }
+          
             if ( ! Directory.Exists( Application.StartupPath + "\\arcpreset") )
             {
                 Directory.CreateDirectory(Application.StartupPath + "\\arcpreset");
@@ -54,7 +61,7 @@ namespace XnewsAdapter
             {
                 mobilephones.Add(phone);
             }
-
+            mediaxml = new MediaInfoXmlClass();
             try
             {
                 redis = ConnectionMultiplexer.Connect(Properties.Settings.Default.redisConnstring);
@@ -106,7 +113,7 @@ namespace XnewsAdapter
 
             timer_check.Enabled = true;
 
-            xtfpThread = new Thread(new ThreadStart(scanxtfpThread));
+            xtfpThread = new Thread(new ThreadStart(scanScriptThread));
             xtfpThread.IsBackground = true;
             xtfpThread.Start();
 
@@ -121,6 +128,7 @@ namespace XnewsAdapter
         private string smstextpath;
         private List<string> mobilephones;
         private ConnectionMultiplexer redis;
+        private MediaInfoXmlClass mediaxml = null;
         #endregion
 
         #region 消息框代理
@@ -446,7 +454,7 @@ namespace XnewsAdapter
             return js.Deserialize<T>(jsonstr);
         }
 
-        private void scanxtfpThread()
+        private void scanScriptThread()
         {
             while (true)
             {
@@ -467,8 +475,7 @@ namespace XnewsAdapter
 
                     foreach (string scriptfile in scriptxmlfiles)
                     {
-                        ResultInfo ri = getxftpinfo(xftpin, "peek");
-
+                      
                         WriteLogNew.writeLog("开始处理获取的文稿信息！", logpath, "info");
                         SetText(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " " + "开始处理获取的文稿信息！\n");
 
@@ -706,72 +713,177 @@ namespace XnewsAdapter
                         //解析xml 获取素材路径
                         string mediafile = "";
                         string newfilename = "";
-                                //判断该文件是否需要转码 
-                                //调用mediainfo 
+                        XmlDocument docvideoxml = new XmlDocument();
+                        try
+                        {
+                            docvideoxml.Load(videoxmlfile);
+                            XmlNode mediafilenode = docvideoxml.SelectSingleNode("/root/fileName");
+                            mediafile = mediafilenode.InnerText;
+                            XmlNode newfilenamenode = docvideoxml.SelectSingleNode("/root/newName");
+                            newfilename = newfilenamenode.InnerText;
+                        }
+                        catch (Exception ee)
+                        {
+                            WriteLogNew.writeLog("处理视频xml异常!" + videoxmlfile +ee.ToString(), logpath, "error");
+                            continue;
+                        }
+                        //复制xml文件到指定目录
+                        try
+                        {
+                            string destmediafile = xftpin.MediaXmlPath + "\\" + Path.GetFileName(videoxmlfile);
+                            File.Copy(videoxmlfile, destmediafile, true);
+                            WriteLogNew.writeLog("复制media xml 到指定目录成功!" + destmediafile, logpath, "info");
+                        }
+                        catch (Exception ee)
+                        {
+                            WriteLogNew.writeLog("复制media xml 到指定目录异常!" + ee.ToString(), logpath, "error");
+                        }
+                        //调用mediainfo 
+                        //判断该文件是否需要转码 
+                        //调用mediainfo 获取素材长度
+                        string newfilepath = Properties.Settings.Default.scanVideoPath + "\\" + mediafile;
+                        bool ifneedTranscode = true;
+                        try
+                        {
+                            if (Path.GetExtension(newfilepath).ToLower().Equals(".mxf"))
+                            {
 
-                                //复制xml文件到指定目录
-                                try
+                                string xmlmedia = mediaxml.of_GetXmlStr(newfilepath);
+                                if (xmlmedia.Equals("Not Media File"))
                                 {
-                                    string destmediafile = xftpin.MediaXmlPath + "\\" + Path.GetFileName(videoxmlfile);
-                                    File.Copy(videoxmlfile, destmediafile, true);
-                                    WriteLogNew.writeLog("复制media xml 到指定目录成功!" + destmediafile, logpath, "info");
+                                    WriteLogNew.writeLog("获取素材媒体mediainfo信息失败！" + newfilepath + "Not Media File!", logpath, "error");
+                                    //加入短信报警
+                                    continue;
                                 }
-                                catch (Exception ee)
+                                else
                                 {
-                                    WriteLogNew.writeLog("复制media xml 到指定目录异常!" + ee.ToString(), logpath, "error");
-                                }
-                          
-                                //认为是视频文件 下发任务到转码
-                                //需要视频文件是否为xdcam 50Mb/s的素材
-                                //调用虹软转码转成50Mb/s MXF文件
-                                string destxmlpreset = Application.StartupPath + "\\arcpreset\\" + Path.GetFileNameWithoutExtension(videoxmlfile) + ".xml";
+                                    if (xmlmedia.Contains("error"))
+                                    {
+                                        WriteLogNew.writeLog("获取素材媒体mediainfo信息出错！" + xmlmedia, logpath, "error");
+                                        //加入短信报警
+                                        continue;
+                                    } //if (xmlmedia.Contains("error"))
+                                    else
+                                    {
+                                        string newxmlmediainfo = replaceSpecialXMLSyntax(xmlmedia);
+                                        if (!xmlmedia.Equals(newxmlmediainfo))
+                                        {
+                                            WriteLogNew.writeLog("获取素材媒体mediainfo信息中含有特殊字符:" + xmlmedia, logpath, "info");
+                                            xmlmedia = newxmlmediainfo;
+                                            WriteLogNew.writeLog("newmediinfoxml:" + xmlmedia, logpath, "info");
+                                        }
 
-                                File.Copy(Application.StartupPath + "\\" + Properties.Settings.Default.arcProfile, destxmlpreset, true);
-                                XmlDocument docarcpreset = new XmlDocument();
+                                        System.Xml.XmlDocument docmediainfo = new XmlDocument();
+                                        docmediainfo.LoadXml(xmlmedia);
+                                        //FrameRate
+                                        XmlNode xmlnodeFrameRate = docmediainfo.SelectSingleNode("//item[@Name='FrameRate']");
+                                        if (xmlnodeFrameRate != null)
+                                        {
+                                            if (xmlnodeFrameRate.InnerText.Equals("25.00"))
+                                            {
 
-                                docarcpreset.Load(destxmlpreset);
+                                                XmlNode xmlnodeFormat_Commercial = docmediainfo.SelectSingleNode("//item[@Name='Format_Commercial']");
+                                                if (xmlnodeFormat_Commercial != null)
+                                                {
+                                                    if (xmlnodeFormat_Commercial.InnerText.Equals(Properties.Settings.Default.avidcoder))
+                                                    {
+                                                        //和avid支持的编码格式一致
+                                                        ifneedTranscode = false;
+                                                        WriteLogNew.writeLog("该素材和avid编码格式一致不需要转码!" , logpath, "info");
+                                                    }//编码一致
+                                                }//编码xmlnode非空
+                                            }
+                                        } //可以获取帧率
 
-                                XmlElement rootarcpreset = docarcpreset.DocumentElement;
+                                        //保存该mediainfo xml
+                                        string mediainfoxml = Application.StartupPath + "\\mediainfo\\" + Path.GetFileNameWithoutExtension(newfilepath) + ".xml";
+                                        if (File.Exists(mediainfoxml))
+                                        {
+                                            WriteLogNew.writeLog("素材媒体mediainfo文件存在：" + mediainfoxml + " 准备删除！", logpath, "info");
+                                            File.Delete(mediainfoxml);
+                                            WriteLogNew.writeLog("删除:" + mediainfoxml, logpath, "info");
+                                        }
+                                        docmediainfo.Save(mediainfoxml);
+                                        WriteLogNew.writeLog("保存mediainfoxml：" + mediainfoxml, logpath, "info");
+                                    }
+                                }  //mediainfo获取信息成功
+                            }  //扩展名为mxf
+                        }
+                        catch (Exception ee)
+                        {
+                            WriteLogNew.writeLog("调用mediainfo异常！" + newfilepath + ee.ToString(), logpath, "error");
+                            //加入短信报警
+                            continue;
+                        }
+                        //认为是视频文件 下发任务到转码
+                        //需要视频文件是否为xdcam 50Mb/s的素材
+                        //调用虹软转码转成50Mb/s MXF文件
+                        if (ifneedTranscode)
+                        {
+                            string destxmlpreset = Application.StartupPath + "\\arcpreset\\" + Path.GetFileNameWithoutExtension(videoxmlfile) + ".xml";
 
-                                //已经把transcode output name 修改了
-                                XmlNode tasknameNode = docarcpreset.SelectSingleNode("/task/name");
-                                string arctitle = newfilename;
+                            File.Copy(Application.StartupPath + "\\" + Properties.Settings.Default.arcProfile, destxmlpreset, true);
+                            XmlDocument docarcpreset = new XmlDocument();
 
-                                tasknameNode.InnerText = arctitle + "_ding";
+                            docarcpreset.Load(destxmlpreset);
 
-                                XmlNode localuri = docarcpreset.SelectSingleNode("/task/inputs/localfile/uri");
+                            XmlElement rootarcpreset = docarcpreset.DocumentElement;
 
-                                try
-                                {
-                                    string linuxfilepath = mediafile.Replace("\\", "/");
-                                    localuri.InnerText = xftpin.TranscodeFileInPath + "/" + linuxfilepath;
+                            //已经把transcode output name 修改了
+                            XmlNode tasknameNode = docarcpreset.SelectSingleNode("/task/name");
+                            string arctitle = newfilename;
 
-                                    XmlNode outputuri = docarcpreset.SelectSingleNode("/task/outputgroups/filearchive/uri");
-                                    outputuri.InnerText = xftpin.TranscodeFileOutPath;
+                            tasknameNode.InnerText = arctitle + "_ding";
 
-                                    XmlNode outputname = docarcpreset.SelectSingleNode("/task/outputgroups/filearchive/targetname");
-                                    outputname.InnerText = newfilename+".mxf";
+                            XmlNode localuri = docarcpreset.SelectSingleNode("/task/inputs/localfile/uri");
 
-                                    docarcpreset.Save(destxmlpreset);
-                                    WriteLogNew.writeLog("下发任务到转码!" + outputname.InnerText, logpath, "info");
-                                    SetText(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " " + "下发任务到转码!" + outputname.InnerText + "\n");
+                            try
+                            {
+                                string linuxfilepath = mediafile.Replace("\\", "/");
+                                localuri.InnerText = xftpin.TranscodeFileInPath + "/" + linuxfilepath;
 
-                                    ArcParam aparm = new ArcParam();
-                                    aparm.Apiurl = Properties.Settings.Default.arcTranscodeAPI;
-                                    WriteLogNew.writeLog("转码IP:" + aparm.Apiurl, logpath, "info");
-                                    aparm.Paramxml = destxmlpreset;
-                                    aparm.Clipinfo = localuri.InnerText;
+                                XmlNode outputuri = docarcpreset.SelectSingleNode("/task/outputgroups/filearchive/uri");
+                                outputuri.InnerText = xftpin.TranscodeFileOutPath;
 
-                                    ThreadPool.QueueUserWorkItem(new WaitCallback(sendArcTranscodeThread), aparm);
+                                XmlNode outputname = docarcpreset.SelectSingleNode("/task/outputgroups/filearchive/targetname");
+                                outputname.InnerText = newfilename + ".mxf";
 
-                                }
-                                catch (Exception ee)
-                                {
-                                    WriteLogNew.writeLog("转码异常!" + ee.ToString(), logpath, "error");
-                                }
-                            
+                                docarcpreset.Save(destxmlpreset);
+                                WriteLogNew.writeLog("下发任务到转码!" + outputname.InnerText, logpath, "info");
+                                SetText(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " " + "下发任务到转码!" + outputname.InnerText + "\n");
 
-                    
+                                ArcParam aparm = new ArcParam();
+                                aparm.Apiurl = Properties.Settings.Default.arcTranscodeAPI;
+                                WriteLogNew.writeLog("转码IP:" + aparm.Apiurl, logpath, "info");
+                                aparm.Paramxml = destxmlpreset;
+                                aparm.Clipinfo = localuri.InnerText;
+
+                                ThreadPool.QueueUserWorkItem(new WaitCallback(sendArcTranscodeThread), aparm);
+
+                            }
+                            catch (Exception ee)
+                            {
+                                WriteLogNew.writeLog("转码异常!" + ee.ToString(), logpath, "error");
+                            }
+                        }
+                        else
+                        {
+                            //不需要转码 需要将素材搬运到avidingest的目录
+                            try
+                            {
+                                WriteLogNew.writeLog("开始复制文件!" + Path.GetFileName( newfilepath), logpath, "info");
+                                string destfile = xftpin.TranscodeFileOutPath + "\\" + newfilename + ".mxf";
+                                File.Copy(newfilepath, destfile, true);
+                                WriteLogNew.writeLog("复制文件完成!" + destfile, logpath, "info");
+
+                                //生成md5sum文件
+                            }
+                            catch (Exception ee)
+                            {
+
+                            }  
+                        }//不需要转码
+
                         #endregion
 
                     } //foreach (string videoxmlfile in videoxmlfiles)
@@ -780,16 +892,38 @@ namespace XnewsAdapter
                 catch (Exception ee)
                 {
 
-                    WriteLogNew.writeLog("处理xftp异常!"+ee.ToString(),logpath,"error");
-                    SetText(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") +" "+"处理xftp异常!" + ee.ToString()+"\n");
-                    string loginfo = "处理xftp异常!" + ee.ToString();
+                    WriteLogNew.writeLog("处理文稿线程异常!"+ee.ToString(),logpath,"error");
+                    SetText(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") +" "+ "处理文稿线程异常!" + ee.ToString()+"\n");
+                    string loginfo = "处理文稿线程异常!" + ee.ToString();
                     createSMStxt(loginfo);
-                    Thread.Sleep(Properties.Settings.Default.scanInterval);
+          
                 }
+
+                Thread.Sleep(Properties.Settings.Default.scanInterval);
 
             }
         }
 
+        private void scanVideoThread()
+        {
+            while (true)
+            {
+                try
+                {
+                    IDatabase db = redis.GetDatabase();
+                    string key = this.Text + "live";
+                    string value = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                    db.StringSet(key, value);
+                }
+                catch (Exception ee)
+                {
+                    WriteLogNew.writeLog("redis 写入key value 异常!" + ee.ToString(), logpath, "error");
+                }
+
+                Thread.Sleep(Properties.Settings.Default.scanInterval);
+            }
+
+        }
         private void createSMStxt(string loginfo)
         {
             //生成txt短信报警
@@ -985,6 +1119,17 @@ namespace XnewsAdapter
             return sec;
         }
 
+        private string replaceSpecialXMLSyntax(string str)
+        {
+            string sr = str;
+            Regex reg = new Regex("[“”《》·&\u0001]");
+            Match m = reg.Match(str);
+            if (m.Success)
+            {
+                sr = reg.Replace(str, "");
+            }
+            return sr;
+        }
 
         private void timer_check_Tick(object sender, EventArgs e)
         {
