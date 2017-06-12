@@ -101,6 +101,10 @@ namespace XnewsAdapter
             XmlNode transcodeFileOutPathNode = root.SelectSingleNode("//transcodeFileOutPath");
             xftpin.TranscodeFileOutPath = transcodeFileOutPathNode.InnerText;
 
+
+            XmlNode mediaXmlOutputPathNode = root.SelectSingleNode("//mediaXmlOutputPath");
+            xftpin.MediaXmlPath = mediaXmlOutputPathNode.InnerText;
+
             #endregion
 
             //读取inewsRelation xml 
@@ -113,9 +117,9 @@ namespace XnewsAdapter
 
             timer_check.Enabled = true;
 
-            xtfpThread = new Thread(new ThreadStart(scanScriptThread));
-            xtfpThread.IsBackground = true;
-            xtfpThread.Start();
+            scriptThread = new Thread(new ThreadStart(scanScriptThread));
+            scriptThread.IsBackground = true;
+            scriptThread.Start();
 
 
             videoThread = new Thread(new ThreadStart(scanVideoThread));
@@ -128,7 +132,7 @@ namespace XnewsAdapter
         private string logpath;
         private XftpInfo xftpin;
         private Hashtable htrelation;
-        private Thread xtfpThread;
+        private Thread scriptThread;
         private Thread videoThread;
         private string smstextpath;
         private List<string> mobilephones;
@@ -530,6 +534,23 @@ namespace XnewsAdapter
                             XmlDocument doc = new XmlDocument();
                             doc.Load(scriptfile);
                             XmlNode root = doc.DocumentElement;
+                            XmlNodeList filesNodelist = root.SelectNodes("//file");
+                            List<string> mediafiles = new List<string>();
+                            if (filesNodelist != null)
+                            {
+                                foreach (XmlNode filenode in filesNodelist)
+                                {
+                                    try
+                                    {
+                                        mediafiles.Add(filenode.FirstChild.InnerText);
+                                    }
+                                    catch (Exception ee)
+                                    {
+                                        WriteLogNew.writeLog("读取文稿中的file节点filename异常!" + ee.ToString(), logpath, "error");
+                                    }
+
+                                }
+                            }
                             XmlNode scriptNode = root.SelectSingleNode("//script");
                             XmlNode txtNode = scriptNode.FirstChild;
                             if (txtNode != null)
@@ -537,53 +558,54 @@ namespace XnewsAdapter
                                 while (txtNode != null)
                                 {
                                     NXMLFORM nf = new NXMLFORM();
+                                    nf.mediafilelist = mediafiles;
                                     XmlNode nsmlnode = txtNode.FirstChild;
                                     while (nsmlnode != null)
                                     {
                                         #region nsml处理
-                                        if (nsmlnode.InnerText.Equals("title"))
+                                        if (nsmlnode.Name.Equals("title"))
                                         {
                                             nf.Title = nsmlnode.InnerText;
                                         }
-                                        else if (nsmlnode.InnerText.Equals("writer"))
+                                        else if (nsmlnode.Name.Equals("writer"))
                                         {
                                             nf.Writer = nsmlnode.InnerText; 
                                         }
-                                        else if (nsmlnode.InnerText.Equals("cameraman")) //cameraman
+                                        else if (nsmlnode.Name.Equals("cameraman")) //cameraman
                                         {
                                             nf.Cameraman = nsmlnode.InnerText;
                                         }
-                                        else if (nsmlnode.InnerText.Equals("platform"))
+                                        else if (nsmlnode.Name.Equals("platform"))
                                         {
                                             nf.Platform = nsmlnode.InnerText.Trim();
                                         }
-                                        else if (nsmlnode.InnerText.Equals("site"))
+                                        else if (nsmlnode.Name.Equals("site"))
                                         {
                                             nf.Site = nsmlnode.InnerText.Trim();
                                         }
-                                        else if (nsmlnode.InnerText.Equals("v-bumen"))
+                                        else if (nsmlnode.Name.Equals("v-bumen"))
                                         {
                                             nf.V_bumen = nsmlnode.InnerText.Trim();
                                         }
-                                        else if (nsmlnode.InnerText.Equals("create-by"))
+                                        else if (nsmlnode.Name.Equals("create-by"))
                                         {
                                             nf.Create_by = nsmlnode.InnerText;
                                         }
-                                        else if (nsmlnode.InnerText.Equals("create-date"))
+                                        else if (nsmlnode.Name.Equals("create-date"))
                                         {
                                             nf.Create_date = nsmlnode.InnerText;
                                         }
                          
-                                        else if (nsmlnode.InnerText.Equals("source"))
+                                        else if (nsmlnode.Name.Equals("source"))
                                         {
                                             nf.Source = nsmlnode.InnerText;
                                         }
                
-                                        else if (nsmlnode.InnerText.Equals("channel"))
+                                        else if (nsmlnode.Name.Equals("channel"))
                                         {
                                             nf.Channel = nsmlnode.InnerText;
                                         }
-                                        else if (nsmlnode.InnerText.Equals("txts"))
+                                        else if (nsmlnode.Name.Equals("txts"))
                                         {
                                             nf.Ntext = nsmlnode.InnerText;
                                         }
@@ -613,18 +635,20 @@ namespace XnewsAdapter
                                         else
                                         {
                                             //从 platform.site
+                                            string pfsite = nf.Platform + "." + nf.Site;
                                             try
                                             {
-                                                if (!string.IsNullOrEmpty(nf.Platform))
+                                               
+                                                if (!string.IsNullOrEmpty(pfsite))
                                                 {
-                                                    inewspath = htrelation[nf.Platform].ToString();
-                                                    WriteLogNew.writeLog("从platform 中获取了对应的Inews目录!platform：" + nf.Platform + " inews目录:" + inewspath, logpath, "info");
-                                                    SetText(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " " + "从platform site中获取了对应的Inews目录!platform：" + nf.Platform + " inews目录:" + inewspath + "\n");
+                                                    inewspath = htrelation[pfsite].ToString();
+                                                    WriteLogNew.writeLog("从platform 中获取了对应的Inews目录!platform：" + pfsite + " inews目录:" + inewspath, logpath, "info");
+                                                    SetText(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " " + "从platform site中获取了对应的Inews目录!platform：" + pfsite + " inews目录:" + inewspath + "\n");
                                                 }
                                             }
                                             catch (Exception et)
                                             {
-                                                WriteLogNew.writeLog("未能从platform site取得对应的inews目录!" + et.ToString() + "platform :" + nf.Platform, logpath, "error");
+                                                WriteLogNew.writeLog("未能从platform site取得对应的inews目录!" + et.ToString() + "platform :" + pfsite, logpath, "error");
                                             }
                                         }
                                     }
@@ -691,12 +715,10 @@ namespace XnewsAdapter
 
                   
                             #endregion
-
                         }
                         catch (Exception ee)
                         {
                             WriteLogNew.writeLog("处理文稿数据异常!" + ee.ToString(), logpath, "error");
-
                         }
                         //将文件设置成已处理
                         try
@@ -720,7 +742,7 @@ namespace XnewsAdapter
 
                     WriteLogNew.writeLog("处理文稿线程异常!"+ee.ToString(),logpath,"error");
                     SetText(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") +" "+ "处理文稿线程异常!" + ee.ToString()+"\n");
-                    string loginfo = "处理文稿线程异常!" + ee.ToString();
+                    string loginfo = this.Text + " " + Properties.Settings.Default.localIP + " 处理文稿线程异常!" + ee.ToString();
                     createSMStxt(loginfo);
           
                 }
@@ -734,23 +756,10 @@ namespace XnewsAdapter
         {
             while (true)
             {
-                try
-                {
-                    IDatabase db = redis.GetDatabase();
-                    string key = this.Text + "live";
-                    string value = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-                    db.StringSet(key, value);
-                }
-                catch (Exception ee)
-                {
-                    WriteLogNew.writeLog("redis 写入key value 异常!" + ee.ToString(), logpath, "error");
-                }
-
                 //处理视频文件
                 string[] videoxmlfiles = Directory.GetFiles(Properties.Settings.Default.scanVideoPath, "*.xml", SearchOption.TopDirectoryOnly);
                 foreach (string videoxmlfile in videoxmlfiles)
                 {
-
                     //生成count 文件
                     #region count处理
                     string countfilename = Path.GetFileName(videoxmlfile);
@@ -834,16 +843,16 @@ namespace XnewsAdapter
                     //调用mediainfo 获取素材长度
                     string newfilepath = Properties.Settings.Default.scanVideoPath + "\\" + mediafile;
                     bool ifneedTranscode = true;
-                    try
+                    if (Path.GetExtension(newfilepath).ToLower().Equals(".mxf"))
                     {
-                        if (Path.GetExtension(newfilepath).ToLower().Equals(".mxf"))
+                        try
                         {
                             string xmlmedia = mediaxml.of_GetXmlStr(newfilepath);
                             if (xmlmedia.Equals("Not Media File"))
                             {
                                 WriteLogNew.writeLog("获取素材媒体mediainfo信息失败！" + newfilepath + "Not Media File!", logpath, "error");
                                 //加入短信报警
-                                string loginfo = "该文件非视频文件!"+ newfilepath;
+                                string loginfo = this.Text + " " + Properties.Settings.Default.localIP + " 该文件非视频文件!" + newfilepath;
                                 createSMStxt(loginfo);
                                 continue;
                             }
@@ -853,7 +862,7 @@ namespace XnewsAdapter
                                 {
                                     WriteLogNew.writeLog("获取素材媒体mediainfo信息出错！" + xmlmedia, logpath, "error");
                                     //加入短信报警
-                                    string loginfo = "获取素材媒体mediainfo信息出错！" + newfilepath;
+                                    string loginfo = this.Text + " " + Properties.Settings.Default.localIP + " 获取素材媒体mediainfo信息出错！" + newfilepath;
                                     createSMStxt(loginfo);
                                     continue;
                                 } //if (xmlmedia.Contains("error"))
@@ -901,14 +910,20 @@ namespace XnewsAdapter
                                     WriteLogNew.writeLog("保存mediainfoxml：" + mediainfoxml, logpath, "info");
                                 }
                             }  //mediainfo获取信息成功
-                        }  //扩展名为mxf
-                    }
-                    catch (Exception ee)
+
+                        }
+                        catch (Exception ee)
+                        {
+                            WriteLogNew.writeLog("调用mediainfo异常！" + newfilepath + ee.ToString(), logpath, "error");
+                            //加入短信报警
+                            continue;
+                        }
+                    }  //扩展名为mxf
+                    else
                     {
-                        WriteLogNew.writeLog("调用mediainfo异常！" + newfilepath + ee.ToString(), logpath, "error");
-                        //加入短信报警
-                        continue;
+                        WriteLogNew.writeLog("非avid直接导入格式！" + newfilepath , logpath, "info");
                     }
+
                     //认为是视频文件 下发任务到转码
                     //需要视频文件是否为xdcam 50Mb/s的素材
                     //调用虹软转码转成50Mb/s MXF文件
@@ -942,11 +957,11 @@ namespace XnewsAdapter
                             outputuri.InnerText = xftpin.TranscodeFileOutPath;
 
                             XmlNode outputname = docarcpreset.SelectSingleNode("/task/outputgroups/filearchive/targetname");
-                            outputname.InnerText = newfilename + ".mxf";
+                            outputname.InnerText = newfilename ;
 
                             docarcpreset.Save(destxmlpreset);
-                            WriteLogNew.writeLog("下发任务到转码!" + outputname.InnerText, logpath, "info");
-                            SetText(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " " + "下发任务到转码!" + outputname.InnerText + "\n");
+                            WriteLogNew.writeLog("下发任务到转码!" + arctitle, logpath, "info");
+                            SetText(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " " + "下发任务到转码!" + arctitle + "\n");
 
                             ArcParam aparm = new ArcParam();
                             aparm.Apiurl = Properties.Settings.Default.arcTranscodeAPI;
@@ -969,39 +984,42 @@ namespace XnewsAdapter
                         string destfile = xftpin.TranscodeFileOutPath + "\\" + newfilename + ".mxf";
                         try
                         {
-                            WriteLogNew.writeLog("开始复制文件!" + Path.GetFileName(newfilepath), logpath, "info");
+                            WriteLogNew.writeLog("开始复制video文件!" + Path.GetFileName(newfilepath), logpath, "info");
                            
                             File.Copy(newfilepath, destfile, true);
-                            WriteLogNew.writeLog("复制文件完成!" + destfile, logpath, "info");
+                            WriteLogNew.writeLog("复制video文件完成!" + destfile, logpath, "info");
+                            SetText(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " " + "复制video文件完成!" + destfile + "\n");
 
                             //生成md5sum文件
-                            File.Copy(Application.StartupPath+"\\1.md5sum", xftpin.TranscodeFileOutPath + "\\" + newfilename+".md5sum");
+                            File.Copy(Application.StartupPath+"\\1.md5sum", xftpin.TranscodeFileOutPath + "\\" + newfilename+".mxf.md5sum");
 
                         }
                         catch (Exception ee)
                         {
                             WriteLogNew.writeLog("复制文件出错!" + newfilepath +ee.ToString(), logpath, "error");
+
                             ifvideosuccess = false;
                           
                         }
                     }//不需要转码
 
-                    if (ifvideosuccess)  //处理成功
+
+                    if (ifvideosuccess)
                     {
                         try
                         {
                             File.Delete(videoxmlfile);
-                            WriteLogNew.writeLog("删除video xml文件！" + videoxmlfile, logpath, "info");
-
-                            File.Delete(newfilepath);
-                            WriteLogNew.writeLog("删除video文件！" + videoxmlfile, logpath, "info");
+                            WriteLogNew.writeLog("删除videoxml!" + videoxmlfile , logpath, "info");
+                            SetText(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " " + "处理完成,删除videoxml!" + videoxmlfile + "\n");
                         }
                         catch (Exception ee)
                         {
-                            WriteLogNew.writeLog("删除 异常！"  + ee.ToString(), logpath, "error");
+                            WriteLogNew.writeLog("删除videoxml 异常:" + videoxmlfile + ee.ToString(), logpath, "error");
                         }
                     }
                     #endregion
+
+
 
                 } //foreach (string videoxmlfile in videoxmlfiles)
 
@@ -1043,7 +1061,6 @@ namespace XnewsAdapter
             {
                 WriteLogNew.writeLog("生成短信异常!"+ee.ToString(),logpath,"error");
             }
-
         }
 
         private void sendArcTranscodeThread(object arcparam)
@@ -1061,22 +1078,18 @@ namespace XnewsAdapter
                 {
                     WriteLogNew.writeLog("二次下发转码出错！" + ria2.ErrorMsg, logpath, "error");
                     //调用短信接口 发短信
-                    string loginfo = "二次下发转码出错！"+aparm.Clipinfo ;
+                    string loginfo = this.Text + " " + Properties.Settings.Default.localIP + " 二次下发转码出错！" +aparm.Clipinfo ;
                     createSMStxt(loginfo);
-
                 }
                 else
                 {
                     WriteLogNew.writeLog("下发任务到转码成功!", logpath, "info");
                 }
-
             }
             else
             {
                 WriteLogNew.writeLog("下发任务到转码成功!", logpath, "info");
             }
-
-
         }
    
         private void createNxml(NXMLFORM nf)
@@ -1155,26 +1168,39 @@ namespace XnewsAdapter
                 sw.WriteLine("<body>");
 
                 string writelines = "";
-                writelines = " <p><cc> &lt; &lt;</cc><pi> 警告--红色模板请勿删除！&lt; 及 & gt; 符号方便打印导语稿件，请勿删除!</pi><cc> &gt; &gt;</cc></p>";
+                writelines = " <p><cc>&lt;&lt;</cc><pi> 警告--红色模板请勿删除！&lt;及&gt;符号方便打印导语稿件，请勿删除!</pi><cc> &gt; &gt;</cc></p>";
                 sw.WriteLine(writelines);
                 //写入具体内容
-                writelines = " <p><cc> &lt; &lt;</cc></p>";
+                writelines = " <p><cc>&lt;&lt;</cc></p>";
+                sw.WriteLine(writelines);
+                writelines = " <p><pi>[正文]</pi></p>";
+                sw.WriteLine(writelines);
+                string outputinfo = getNsmlBody(nf.Ntext);
+                sw.WriteLine(outputinfo);
+
+                writelines   = "<p><cc>&gt;&gt;</cc></p>"; 
                 sw.WriteLine(writelines);
 
-                //
-                writelines = " <p><pi>[正文] </pi> </p>";
+                writelines = "<p><pi>[导语]</pi></p>";
                 sw.WriteLine(writelines);
 
-                writelines   = "< p><cc>&gt;&gt;</cc></p>  "; 
+                writelines = "<p></p>";
                 sw.WriteLine(writelines);
-                writelines = "<p><pi>[导语] </pi> </ p >";
+
+                writelines = "<p><pi>[编后]</pi></p>";
                 sw.WriteLine(writelines);
-                writelines = "< p ></ p >";
+
+                writelines = "<p></p>";
                 sw.WriteLine(writelines);
-                writelines = "< p >< pi >[编后] </ pi >  </ p >";
+
+                writelines = "<p>素材列表:</p>";
                 sw.WriteLine(writelines);
-                writelines = "< p ></ p >";
-                sw.WriteLine(writelines);
+                //写入素材信息
+                foreach (string md in nf.mediafilelist)
+                {
+
+                    sw.WriteLine("<p>"+md+"</p>");
+                }
                 sw.WriteLine("</body>");
                 sw.WriteLine("</nsml>");
                 
@@ -1214,6 +1240,37 @@ namespace XnewsAdapter
                 sr = reg.Replace(str, "");
             }
             return sr;
+        }
+
+        public static string replaceHtmlTag(string html, int length = 0)
+        {
+            string strText = System.Text.RegularExpressions.Regex.Replace(html, "<[^>]+>", "");
+            strText = System.Text.RegularExpressions.Regex.Replace(strText, "&[^;]+;", "");
+
+            if (length > 0 && strText.Length > length)
+                return strText.Substring(0, length);
+
+            return strText;
+        }
+
+        private string getNsmlBody(string texts)
+        {
+            string output = "";
+            string[] strs = texts.Split(new string[] { "</p>" }, StringSplitOptions.RemoveEmptyEntries);
+            if (strs.Length > 0)
+            {
+                foreach (string str in strs)
+                {
+                    string outstr = "<p>" + replaceHtmlTag(str) + "</p>";
+                    output += outstr;
+                }
+            }
+            else
+            {
+                output = "<p>" + texts + "</p>";
+            }
+            return output;
+
         }
 
         private void timer_check_Tick(object sender, EventArgs e)

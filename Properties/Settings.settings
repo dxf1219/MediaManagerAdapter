@@ -15,7 +15,7 @@
       <Value Profile="(Default)">mxf.xml</Value>
     </Setting>
     <Setting Name="arcappid" Type="System.String" Scope="User">
-      <Value Profile="(Default)">mxf</Value>
+      <Value Profile="(Default)">xmt</Value>
     </Setting>
     <Setting Name="errorRetryCounts" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">3</Value>
@@ -47,6 +47,9 @@
     </Setting>
     <Setting Name="avidcoder" Type="System.String" Scope="User">
       <Value Profile="(Default)">XDCAM HD422</Value>
+    </Setting>
+    <Setting Name="localIP" Type="System.String" Scope="User">
+      <Value Profile="(Default)">172.27.3.159</Value>
     </Setting>
   </Settings>
 </SettingsFile>

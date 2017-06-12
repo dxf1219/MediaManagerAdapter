@@ -311,6 +311,8 @@ namespace XnewsAdapter
 
     public class NXMLFORM
     {
+
+        public List<string> mediafilelist;
         //属性 
         private string platform;
 

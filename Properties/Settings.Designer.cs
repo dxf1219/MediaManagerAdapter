@@ -73,7 +73,7 @@ namespace XnewsAdapter.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("mxf")]
+        [global::System.Configuration.DefaultSettingValueAttribute("xmt")]
         public string arcappid {
             get {
                 return ((string)(this["arcappid"]));
@@ -191,6 +191,18 @@ namespace XnewsAdapter.Properties {
             }
             set {
                 this["avidcoder"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("172.27.3.159")]
+        public string localIP {
+            get {
+                return ((string)(this["localIP"]));
+            }
+            set {
+                this["localIP"] = value;
             }
         }
     }
