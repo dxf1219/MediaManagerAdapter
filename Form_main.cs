@@ -834,7 +834,7 @@ namespace XnewsAdapter
                         {
                             Directory.CreateDirectory(xftpin.MediaXmlPath);
                         }
-                        string destmediafile = xftpin.MediaXmlPath + "\\" + Path.GetFileName(mediafile);
+                        string destmediafile = xftpin.MediaXmlPath + "\\" + Path.GetFileNameWithoutExtension(mediafile)+".xml";
                         File.Copy(videoxmlfile, destmediafile, true);
                         WriteLogNew.writeLog("复制media xml 到指定目录成功!" + destmediafile, logpath, "info");
                     }
