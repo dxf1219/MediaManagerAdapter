@@ -110,8 +110,8 @@ namespace XnewsAdapter
             //读取inewsRelation xml 
             readRelationXml();
 
-            WriteLogNew.writeLog("读取avidinserver 配置信息成功！", logpath, "info");
-            SetText(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") +" "+"读取avidinserver 配置信息成功！\n");
+            WriteLogNew.writeLog("读取配置信息成功！", logpath, "info");
+            SetText(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") +" "+"读取配置信息成功！\n");
 
             timer_check.Interval = Properties.Settings.Default.checkStatusInterval;
 
