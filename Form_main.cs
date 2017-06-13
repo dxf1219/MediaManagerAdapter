@@ -46,9 +46,9 @@ namespace XnewsAdapter
                 Directory.CreateDirectory(Application.StartupPath + "\\counts");
             }
 
-            if (!Directory.Exists(Application.StartupPath + "\\dealScriptxml"))
+            if (!Directory.Exists(Application.StartupPath + "\\dealxml"))
             {
-                Directory.CreateDirectory(Application.StartupPath + "\\dealScriptxml");
+                Directory.CreateDirectory(Application.StartupPath + "\\dealxml");
             }
             htrelation = new Hashtable();
             WriteLogNew.writeLog("软件启动!",logpath,"info");
@@ -724,7 +724,7 @@ namespace XnewsAdapter
                         try
                         {
                             //删除文稿文件
-                            string localscirptxml = Application.StartupPath + "\\dealScriptxml\\" + Path.GetFileName(scriptfile);
+                            string localscirptxml = Application.StartupPath + "\\dealxml\\" + Path.GetFileName(scriptfile);
                             File.Copy(scriptfile, localscirptxml, true);
                             WriteLogNew.writeLog("复制处理文稿到本地!" + localscirptxml, logpath, "info");
                             File.Delete(scriptfile);
@@ -830,7 +830,11 @@ namespace XnewsAdapter
                     //复制xml文件到指定目录
                     try
                     {
-                        string destmediafile = xftpin.MediaXmlPath + "\\" + Path.GetFileName(videoxmlfile);
+                        if (!Directory.Exists(xftpin.MediaXmlPath))
+                        {
+                            Directory.CreateDirectory(xftpin.MediaXmlPath);
+                        }
+                        string destmediafile = xftpin.MediaXmlPath + "\\" + Path.GetFileName(mediafile);
                         File.Copy(videoxmlfile, destmediafile, true);
                         WriteLogNew.writeLog("复制media xml 到指定目录成功!" + destmediafile, logpath, "info");
                     }
@@ -992,14 +996,11 @@ namespace XnewsAdapter
 
                             //生成md5sum文件
                             File.Copy(Application.StartupPath+"\\1.md5sum", xftpin.TranscodeFileOutPath + "\\" + newfilename+".mxf.md5sum");
-
                         }
                         catch (Exception ee)
                         {
                             WriteLogNew.writeLog("复制文件出错!" + newfilepath +ee.ToString(), logpath, "error");
-
                             ifvideosuccess = false;
-                          
                         }
                     }//不需要转码
 
@@ -1008,6 +1009,10 @@ namespace XnewsAdapter
                     {
                         try
                         {
+                            string localvideoxml = Application.StartupPath + "\\dealxml\\" + Path.GetFileName(videoxmlfile);
+                            File.Copy(videoxmlfile, localvideoxml, true);
+                            WriteLogNew.writeLog("复制处理视频xml到本地!" + localvideoxml, logpath, "info");
+
                             File.Delete(videoxmlfile);
                             WriteLogNew.writeLog("删除videoxml!" + videoxmlfile , logpath, "info");
                             SetText(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " " + "处理完成,删除videoxml!" + videoxmlfile + "\n");
@@ -1018,8 +1023,6 @@ namespace XnewsAdapter
                         }
                     }
                     #endregion
-
-
 
                 } //foreach (string videoxmlfile in videoxmlfiles)
 
